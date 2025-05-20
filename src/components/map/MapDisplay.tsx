@@ -52,7 +52,7 @@ const MapDisplay: FC<MapDisplayProps> = ({
   }
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['places', 'geocoding', 'marker']}>
       <Map
         mapId="roamfree_map_main"
         center={mapCenter}

@@ -2,6 +2,7 @@
 "use client";
 
 import type { FC } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,8 +13,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { attractionPreferencesOptions, type AttractionPreference, type Coordinates } from '@/types';
-import { Wand2, MapPin, Clock, Search, XCircle, LocateFixed } from 'lucide-react';
+import { Wand2, MapPin, Clock, Search, XCircle, LocateFixed, SearchIcon, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// Removed: import { usePlacesAutocompleteService } from '@vis.gl/react-google-maps';
+import { useToast } from '@/hooks/use-toast';
 
 const routeGeneratorSchema = z.object({
   prompt: z.string().min(10, { message: "Please describe your ideal exploration in at least 10 characters." }),
@@ -41,6 +44,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
   userLocation,
   isGeolocating
 }) => {
+  const { toast } = useToast();
   const form = useForm<RouteGeneratorFormData>({
     resolver: zodResolver(routeGeneratorSchema),
     defaultValues: {
@@ -51,6 +55,100 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
     },
   });
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
+  const [sessionToken, setSessionToken] = useState<google.maps.places.AutocompleteSessionToken | null>(null);
+  const [isPredictionLoading, setIsPredictionLoading] = useState(false);
+
+  useEffect(() => {
+    // Initialize Google Maps services when the API is loaded
+    if (window.google && window.google.maps && window.google.maps.places) {
+      if (!autocompleteService) {
+        setAutocompleteService(new window.google.maps.places.AutocompleteService());
+      }
+      if (!sessionToken) {
+        setSessionToken(new window.google.maps.places.AutocompleteSessionToken());
+      }
+    }
+    // This effect depends on the global google object, which loads asynchronously.
+    // It will re-run if autocompleteService or sessionToken are null and then google maps api becomes available.
+  }, [autocompleteService, sessionToken]);
+
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.trim() !== '') {
+      if (autocompleteService && sessionToken) {
+        setIsPredictionLoading(true);
+        autocompleteService.getPlacePredictions(
+          { input: value, sessionToken: sessionToken },
+          (newPredictions, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && newPredictions) {
+              setPredictions(newPredictions);
+            } else {
+              setPredictions([]);
+              if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                console.error('Google Places Autocomplete API error:', status);
+                // Optionally, show a toast for other errors
+                // toast({ variant: "destructive", title: "Search Error", description: "Could not fetch place suggestions." });
+              }
+            }
+            setIsPredictionLoading(false);
+          }
+        );
+        setShowPredictions(true);
+      } else {
+        // Autocomplete service not ready yet
+        setPredictions([]);
+        setShowPredictions(true); // Show to potentially display a "not ready" or "loading service" message
+      }
+    } else {
+      setPredictions([]);
+      setShowPredictions(false);
+    }
+  };
+
+  const handlePredictionClick = (prediction: google.maps.places.AutocompletePrediction) => {
+    setSearchQuery(prediction.description);
+    setShowPredictions(false);
+    setPredictions([]);
+
+    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
+      toast({ variant: "destructive", title: "Error", description: "Geocoder service is not available." });
+      return;
+    }
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ placeId: prediction.place_id }, (results, status) => {
+      if (status === 'OK' && results && results[0] && results[0].geometry) {
+        const location = results[0].geometry.location;
+        setCustomStartLocation({ lat: location.lat(), lng: location.lng() });
+        toast({ title: "Location Set", description: `Starting point set to ${prediction.description}.` });
+      } else {
+        toast({ variant: "destructive", title: "Geocoding Error", description: `Could not find coordinates for ${prediction.description}. Status: ${status}` });
+        console.error('Geocode was not successful for the following reason: ' + status);
+      }
+    });
+  };
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowPredictions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
   const handleSubmit: SubmitHandler<RouteGeneratorFormData> = (data) => {
     onSubmit(data);
   };
@@ -58,6 +156,41 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 p-1">
+        
+        <div className="relative" ref={searchContainerRef}>
+          <Label htmlFor="location-search" className="flex items-center gap-2 mb-1">
+            <SearchIcon size={16}/> Set Custom Start Location (Optional)
+          </Label>
+          <Input
+            id="location-search"
+            type="text"
+            placeholder="Search for a place..."
+            value={searchQuery}
+            onChange={handleSearchInputChange}
+            onFocus={() => { if (searchQuery.trim()) setShowPredictions(true);}}
+            className="mb-1"
+          />
+          {showPredictions && (
+            <ul className="absolute z-50 w-full bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {isPredictionLoading && <li className="p-2 text-sm text-muted-foreground flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading...</li>}
+              {!isPredictionLoading && predictions.length === 0 && searchQuery.trim() !== '' && (
+                 <li className="p-2 text-sm text-muted-foreground">No results found.</li>
+              )}
+               {!isPredictionLoading && predictions.length === 0 && searchQuery.trim() !== '' && !autocompleteService && (
+                 <li className="p-2 text-sm text-muted-foreground">Autocomplete service loading...</li>
+              )}
+              {predictions.map((p) => (
+                <li 
+                  key={p.place_id} 
+                  onClick={() => handlePredictionClick(p)} 
+                  className="p-2 text-sm hover:bg-accent cursor-pointer"
+                >
+                  {p.description}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         
         <Alert variant={customStartLocation ? "default" : "destructive"} className="mb-4 border-dashed">
            <div className="flex items-center justify-between">
@@ -76,7 +209,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
                         <LocateFixed className="h-4 w-4 animate-pulse inline-block mr-2" />
                         <AlertTitle className="inline align-middle">Detecting Location...</AlertTitle>
                         <AlertDescription className="text-xs">
-                           Using your current location. Click map to set a custom start.
+                           Using your current location. Search or click map to set a custom start.
                         </AlertDescription>
                     </>
                 ) : userLocation ? (
@@ -84,7 +217,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
                         <LocateFixed className="h-4 w-4 inline-block mr-2 text-green-500" />
                         <AlertTitle className="inline align-middle">Using Current Location</AlertTitle>
                          <AlertDescription className="text-xs">
-                            Lat: {userLocation.lat.toFixed(4)}, Lng: {userLocation.lng.toFixed(4)}. Click map for custom start.
+                            Lat: {userLocation.lat.toFixed(4)}, Lng: {userLocation.lng.toFixed(4)}. Search or click map for custom start.
                         </AlertDescription>
                     </>
                 ) : (
@@ -92,7 +225,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
                         <XCircle className="h-4 w-4 inline-block mr-2 text-destructive" />
                         <AlertTitle className="inline align-middle">Location Unknown</AlertTitle>
                         <AlertDescription className="text-xs">
-                            Enable location services or click the map to set a starting point.
+                            Enable location services, search, or click the map to set a starting point.
                         </AlertDescription>
                     </>
                 )}
@@ -101,7 +234,11 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({
                 <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => setCustomStartLocation(null)} 
+                    onClick={() => {
+                        setCustomStartLocation(null);
+                        setSearchQuery(''); 
+                        toast({ title: "Custom Start Cleared", description: "Using current location if available."})
+                    }} 
                     className="text-xs p-1 h-auto"
                     title="Clear custom start location"
                 >
