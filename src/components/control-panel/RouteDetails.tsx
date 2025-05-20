@@ -14,8 +14,8 @@ import MapDisplay from '@/components/map/MapDisplay';
 interface RouteDetailsProps {
   routeData: GeneratedRouteData | null;
   summaryData: RouteSummaryData | null;
-  userLocation: Coordinates | null;
-  mapsApiKey: string | undefined;
+  userLocation: Coordinates | null; // Added userLocation
+  mapsApiKey: string | undefined;   // Added mapsApiKey
   onAddToWishlist: (route: GeneratedRouteData) => void;
   onRemoveFromWishlist: (routeId: string) => void;
   wishlist: SavedRoute[];
@@ -33,8 +33,8 @@ const formatTime = (minutes: number): string => {
 const RouteDetails: FC<RouteDetailsProps> = ({
   routeData,
   summaryData,
-  userLocation,
-  mapsApiKey,
+  userLocation, // Destructure userLocation
+  mapsApiKey,   // Destructure mapsApiKey
   onAddToWishlist,
   onRemoveFromWishlist,
   wishlist,
@@ -53,8 +53,12 @@ const RouteDetails: FC<RouteDetailsProps> = ({
   const hasRouteLocations = routeData?.locations && routeData.locations.length > 0;
   const isInWishlist = routeData ? wishlist.some(item => item.id === routeData.id) : false;
 
+  const mapDefaultCenter = hasRouteLocations && routeData?.locations[0]
+    ? { lat: routeData.locations[0].latitude, lng: routeData.locations[0].longitude }
+    : userLocation || undefined;
+
   return (
-    <ScrollArea className="h-[calc(100vh-200px)] pr-2">
+    <ScrollArea className="h-[calc(100vh-200px)] pr-2"> {/* Adjusted height */}
       <div className="space-y-4">
         {routeData && (
           <div className="flex justify-end mb-2 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2 -mx-1 px-1 rounded">
@@ -79,13 +83,9 @@ const RouteDetails: FC<RouteDetailsProps> = ({
               <div className="h-[250px] w-full rounded-md overflow-hidden border border-border">
                 <MapDisplay
                   apiKey={mapsApiKey}
-                  userLocation={userLocation}
+                  userLocation={userLocation} // Pass userLocation to this mini-map too
                   routeLocations={routeData.locations}
-                  defaultCenter={
-                    routeData.locations[0]
-                      ? { lat: routeData.locations[0].latitude, lng: routeData.locations[0].longitude }
-                      : userLocation || undefined 
-                  }
+                  defaultCenter={mapDefaultCenter}
                   defaultZoom={13} 
                 />
               </div>
@@ -126,7 +126,7 @@ const RouteDetails: FC<RouteDetailsProps> = ({
                 {routeData.locations.length > 0 ? (
                   <ul className="space-y-3">
                     {routeData.locations.map((location: RouteLocation, index: number) => (
-                      <li key={index} className="p-3 bg-muted/50 rounded-md border border-border">
+                      <li key={`${location.name}-${index}-${location.latitude}`} className="p-3 bg-muted/50 rounded-md border border-border">
                         <div className="flex items-center justify-between mb-1">
                            <h5 className="font-medium text-sm text-primary-foreground bg-primary px-2 py-1 rounded-full w-6 h-6 flex items-center justify-center text-xs">{index + 1}</h5>
                            <h5 className="font-medium text-sm flex-1 ml-2">{location.name}</h5>

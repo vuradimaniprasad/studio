@@ -86,7 +86,7 @@ const RoamFreeClientPage = () => {
         title: "Location Needed",
         description: "Your current location is required to generate a route. Please enable location services.",
       });
-      getCurrentPosition();
+      getCurrentPosition(); // Attempt to get position again
       return;
     }
 

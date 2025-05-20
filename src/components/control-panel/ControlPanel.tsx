@@ -25,16 +25,16 @@ interface ControlPanelProps {
     generating: boolean;
     summarizing: boolean;
     adjusting: boolean;
-    authCheck?: boolean; // Optional as it might not be relevant here directly
+    authCheck?: boolean; 
   };
   currentRouteDescription?: string | null;
-  userLocation: Coordinates | null;
-  mapsApiKey: string | undefined;
-  onLogout: () => void; // New prop
-  wishlist: SavedRoute[]; // New prop
-  onAddToWishlist: (route: GeneratedRouteData) => void; // New prop
-  onRemoveFromWishlist: (routeId: string) => void; // New prop
-  onSelectWishlistItem: (route: SavedRoute) => void; // New prop
+  userLocation: Coordinates | null; // Added userLocation
+  mapsApiKey: string | undefined;   // Added mapsApiKey
+  onLogout: () => void; 
+  wishlist: SavedRoute[]; 
+  onAddToWishlist: (route: GeneratedRouteData) => void; 
+  onRemoveFromWishlist: (routeId: string) => void; 
+  onSelectWishlistItem: (route: SavedRoute) => void; 
 }
 
 const ControlPanel: FC<ControlPanelProps> = ({
@@ -47,8 +47,8 @@ const ControlPanel: FC<ControlPanelProps> = ({
   routeAdjustment,
   isLoading,
   currentRouteDescription,
-  userLocation,
-  mapsApiKey,
+  userLocation, // Destructure userLocation
+  mapsApiKey,   // Destructure mapsApiKey
   onLogout,
   wishlist,
   onAddToWishlist,
@@ -71,7 +71,7 @@ const ControlPanel: FC<ControlPanelProps> = ({
       </CardHeader>
       <CardContent className="p-0 flex-grow overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 rounded-none border-b"> {/* Changed to grid-cols-4 */}
+          <TabsList className="grid w-full grid-cols-4 rounded-none border-b"> 
             <TabsTrigger value="generate" className="py-3 text-sm">
               <SlidersHorizontal size={16} className="mr-2" /> Generate
             </TabsTrigger>
@@ -81,7 +81,7 @@ const ControlPanel: FC<ControlPanelProps> = ({
             <TabsTrigger value="adjust" className="py-3 text-sm">
               <Shuffle size={16} className="mr-2" /> Adjust
             </TabsTrigger>
-            <TabsTrigger value="wishlist" className="py-3 text-sm"> {/* New Wishlist Tab Trigger */}
+            <TabsTrigger value="wishlist" className="py-3 text-sm"> 
               <Heart size={16} className="mr-2" /> Wishlist
             </TabsTrigger>
           </TabsList>
@@ -94,8 +94,8 @@ const ControlPanel: FC<ControlPanelProps> = ({
               <RouteDetails
                 routeData={generatedRoute}
                 summaryData={routeSummary}
-                userLocation={userLocation}
-                mapsApiKey={mapsApiKey}
+                userLocation={userLocation} // Pass userLocation
+                mapsApiKey={mapsApiKey}     // Pass mapsApiKey
                 onAddToWishlist={onAddToWishlist}
                 onRemoveFromWishlist={onRemoveFromWishlist}
                 wishlist={wishlist}
@@ -109,7 +109,7 @@ const ControlPanel: FC<ControlPanelProps> = ({
                 currentRouteDescription={currentRouteDescription}
               />
             </TabsContent>
-            <TabsContent value="wishlist"> {/* New Wishlist Tab Content */}
+            <TabsContent value="wishlist"> 
               <WishlistTab
                 wishlist={wishlist}
                 onSelectWishlistItem={onSelectWishlistItem}

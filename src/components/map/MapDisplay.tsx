@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -29,8 +30,10 @@ const MapDisplay: FC<MapDisplayProps> = ({
       setMapCenter(userLocation);
     } else if (routeLocations && routeLocations.length > 0) {
       setMapCenter({ lat: routeLocations[0].latitude, lng: routeLocations[0].longitude });
+    } else {
+      setMapCenter(defaultCenter);
     }
-  }, [userLocation, routeLocations]);
+  }, [userLocation, routeLocations, defaultCenter]);
 
   if (!apiKey) {
     return <div className="flex items-center justify-center h-full bg-muted rounded-lg shadow-inner"><p className="text-destructive-foreground p-4 bg-destructive rounded-md">Google Maps API Key is missing.</p></div>;
@@ -39,14 +42,12 @@ const MapDisplay: FC<MapDisplayProps> = ({
   return (
     <APIProvider apiKey={apiKey}>
       <Map
-        defaultCenter={defaultCenter}
+        mapId="roamfree_map_main" // Unique mapId
         center={mapCenter}
-        defaultZoom={defaultZoom}
         zoom={userLocation || (routeLocations && routeLocations.length > 0) ? 14 : defaultZoom}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
-        mapId="roamfree_map"
-        className="rounded-lg shadow-md"
+        className="rounded-lg shadow-md w-full h-full"
       >
         {userLocation && (
           <AdvancedMarker position={userLocation} title="Your Location">
@@ -58,7 +59,7 @@ const MapDisplay: FC<MapDisplayProps> = ({
 
         {routeLocations?.map((location, index) => (
           <AdvancedMarker
-            key={`${location.name}-${index}`}
+            key={`${location.name}-${index}-${location.latitude}-${location.longitude}`} // More unique key
             position={{ lat: location.latitude, lng: location.longitude }}
             title={location.name}
             onClick={() => setSelectedMarker(location)}
@@ -79,7 +80,7 @@ const MapDisplay: FC<MapDisplayProps> = ({
             onCloseClick={() => setSelectedMarker(null)}
             pixelOffset={[0,-30]}
           >
-            <div className="p-2">
+            <div className="p-2 max-w-xs">
               <h3 className="font-semibold text-sm text-foreground mb-1">{selectedMarker.name}</h3>
               <p className="text-xs text-muted-foreground">{selectedMarker.description}</p>
             </div>
