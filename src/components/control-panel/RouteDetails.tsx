@@ -2,12 +2,13 @@
 "use client";
 
 import type { FC } from 'react';
-import type { GeneratedRouteData, RouteSummaryData, RouteLocation, Coordinates } from '@/types';
+import type { GeneratedRouteData, RouteSummaryData, RouteLocation, Coordinates, SavedRoute } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ListChecks, Clock, Info, MapPin, Map as MapIcon } from 'lucide-react';
+import { ListChecks, Clock, Info, MapPin, Map as MapIcon, Heart, Trash2 } from 'lucide-react';
 import MapDisplay from '@/components/map/MapDisplay';
 
 interface RouteDetailsProps {
@@ -15,6 +16,9 @@ interface RouteDetailsProps {
   summaryData: RouteSummaryData | null;
   userLocation: Coordinates | null;
   mapsApiKey: string | undefined;
+  onAddToWishlist: (route: GeneratedRouteData) => void;
+  onRemoveFromWishlist: (routeId: string) => void;
+  wishlist: SavedRoute[];
 }
 
 const formatTime = (minutes: number): string => {
@@ -26,24 +30,47 @@ const formatTime = (minutes: number): string => {
   return result.trim() || 'N/A';
 };
 
-const RouteDetails: FC<RouteDetailsProps> = ({ routeData, summaryData, userLocation, mapsApiKey }) => {
+const RouteDetails: FC<RouteDetailsProps> = ({
+  routeData,
+  summaryData,
+  userLocation,
+  mapsApiKey,
+  onAddToWishlist,
+  onRemoveFromWishlist,
+  wishlist,
+}) => {
   if (!routeData && !summaryData) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Info size={20} />Awaiting Route</CardTitle>
-          <CardDescription>Generate a route to see its details here.</CardDescription>
+          <CardDescription>Generate a route or select one from your wishlist to see its details here.</CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
   const hasRouteLocations = routeData?.locations && routeData.locations.length > 0;
+  const isInWishlist = routeData ? wishlist.some(item => item.id === routeData.id) : false;
 
   return (
-    <ScrollArea className="h-[calc(100vh-200px)] pr-2"> {/* Adjust height as needed */}
+    <ScrollArea className="h-[calc(100vh-200px)] pr-2">
       <div className="space-y-4">
-        {hasRouteLocations && mapsApiKey && (
+        {routeData && (
+          <div className="flex justify-end mb-2 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2 -mx-1 px-1 rounded">
+            {isInWishlist ? (
+              <Button variant="outline" onClick={() => onRemoveFromWishlist(routeData.id)}>
+                <Trash2 size={16} className="mr-2 text-destructive" /> Remove from Wishlist
+              </Button>
+            ) : (
+              <Button variant="default" onClick={() => onAddToWishlist(routeData)}>
+                <Heart size={16} className="mr-2" /> Add to Wishlist
+              </Button>
+            )}
+          </div>
+        )}
+
+        {hasRouteLocations && mapsApiKey && routeData && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><MapIcon size={20} />Route Overview</CardTitle>
@@ -53,10 +80,10 @@ const RouteDetails: FC<RouteDetailsProps> = ({ routeData, summaryData, userLocat
                 <MapDisplay
                   apiKey={mapsApiKey}
                   userLocation={userLocation}
-                  routeLocations={routeData!.locations}
+                  routeLocations={routeData.locations}
                   defaultCenter={
-                    routeData!.locations[0]
-                      ? { lat: routeData!.locations[0].latitude, lng: routeData!.locations[0].longitude }
+                    routeData.locations[0]
+                      ? { lat: routeData.locations[0].latitude, lng: routeData.locations[0].longitude }
                       : userLocation || undefined 
                   }
                   defaultZoom={13} 
