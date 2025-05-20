@@ -9,17 +9,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-// import { Slider } from "@/components/ui/slider"; // Slider is no longer used
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { attractionPreferencesOptions, type AttractionPreference } from '@/types';
-import { Wand2, MapPin, Clock, Search } from 'lucide-react';
+import { attractionPreferencesOptions, type AttractionPreference, type Coordinates } from '@/types';
+import { Wand2, MapPin, Clock, Search, XCircle, LocateFixed } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const routeGeneratorSchema = z.object({
   prompt: z.string().min(10, { message: "Please describe your ideal exploration in at least 10 characters." }),
   radius: z.number().min(0.5, { message: "Radius must be at least 0.5 km." }).max(10, { message: "Radius cannot exceed 10 km." }),
   timeLimit: z.number().min(0.5, { message: "Time limit must be at least 0.5 hours." }).max(6, { message: "Time limit cannot exceed 6 hours." }),
-  preferences: z.array(z.string()).default([]), // Made preferences optional, defaulting to an empty array
+  preferences: z.array(z.string()).default([]),
 });
 
 export type RouteGeneratorFormData = z.infer<typeof routeGeneratorSchema>;
@@ -27,15 +27,26 @@ export type RouteGeneratorFormData = z.infer<typeof routeGeneratorSchema>;
 interface RouteGeneratorProps {
   onSubmit: (data: RouteGeneratorFormData) => void;
   isLoading: boolean;
+  customStartLocation: Coordinates | null;
+  setCustomStartLocation: (coords: Coordinates | null) => void;
+  userLocation: Coordinates | null;
+  isGeolocating: boolean;
 }
 
-const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
+const RouteGenerator: FC<RouteGeneratorProps> = ({ 
+  onSubmit, 
+  isLoading, 
+  customStartLocation, 
+  setCustomStartLocation,
+  userLocation,
+  isGeolocating
+}) => {
   const form = useForm<RouteGeneratorFormData>({
     resolver: zodResolver(routeGeneratorSchema),
     defaultValues: {
       prompt: "",
-      radius: 2, // Default 2 km
-      timeLimit: 2, // Default 2 hours
+      radius: 2, 
+      timeLimit: 2,
       preferences: [],
     },
   });
@@ -47,6 +58,59 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 p-1">
+        
+        <Alert variant={customStartLocation ? "default" : "destructive"} className="mb-4 border-dashed">
+           <div className="flex items-center justify-between">
+            <div>
+                {customStartLocation ? (
+                    <>
+                        <LocateFixed className="h-4 w-4 inline-block mr-2 text-primary" />
+                        <AlertTitle className="inline align-middle">Custom Start Location Active</AlertTitle>
+                        <AlertDescription className="text-xs">
+                            Lat: {customStartLocation.lat.toFixed(4)}, Lng: {customStartLocation.lng.toFixed(4)}.
+                            Routes will start from this point.
+                        </AlertDescription>
+                    </>
+                ) : isGeolocating ? (
+                     <>
+                        <LocateFixed className="h-4 w-4 animate-pulse inline-block mr-2" />
+                        <AlertTitle className="inline align-middle">Detecting Location...</AlertTitle>
+                        <AlertDescription className="text-xs">
+                           Using your current location. Click map to set a custom start.
+                        </AlertDescription>
+                    </>
+                ) : userLocation ? (
+                     <>
+                        <LocateFixed className="h-4 w-4 inline-block mr-2 text-green-500" />
+                        <AlertTitle className="inline align-middle">Using Current Location</AlertTitle>
+                         <AlertDescription className="text-xs">
+                            Lat: {userLocation.lat.toFixed(4)}, Lng: {userLocation.lng.toFixed(4)}. Click map for custom start.
+                        </AlertDescription>
+                    </>
+                ) : (
+                     <>
+                        <XCircle className="h-4 w-4 inline-block mr-2 text-destructive" />
+                        <AlertTitle className="inline align-middle">Location Unknown</AlertTitle>
+                        <AlertDescription className="text-xs">
+                            Enable location services or click the map to set a starting point.
+                        </AlertDescription>
+                    </>
+                )}
+            </div>
+             {customStartLocation && (
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setCustomStartLocation(null)} 
+                    className="text-xs p-1 h-auto"
+                    title="Clear custom start location"
+                >
+                    <XCircle className="h-4 w-4 mr-1" /> Clear
+                </Button>
+            )}
+           </div>
+        </Alert>
+
         <FormField
           control={form.control}
           name="prompt"
@@ -160,13 +224,12 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
                 />
               ))}
               </div>
-              <FormMessage /> {/* This will no longer show the "at least one" error */}
+              <FormMessage />
             </FormItem>
           )}
         />
 
-
-        <Button type="submit" disabled={isLoading} className="w-full">
+        <Button type="submit" disabled={isLoading || (!userLocation && !customStartLocation && !isGeolocating)} className="w-full">
           <Wand2 className="mr-2 h-4 w-4" />
           {isLoading ? 'Generating Your Adventure...' : 'Generate Route'}
         </Button>
@@ -176,4 +239,3 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
 };
 
 export default RouteGenerator;
-

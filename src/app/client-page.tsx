@@ -18,11 +18,12 @@ const RoamFreeClientPage = () => {
   const { toast } = useToast();
   const { coordinates: userLocation, error: geoError, loading: geoLoading, getCurrentPosition } = useGeolocation();
   
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null initially, then boolean
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [generatedRoute, setGeneratedRoute] = useState<GeneratedRouteData | null>(null);
   const [routeSummary, setRouteSummary] = useState<RouteSummaryData | null>(null);
   const [routeAdjustment, setRouteAdjustment] = useState<RouteAdjustmentData | null>(null);
   const [wishlist, setWishlist] = useState<SavedRoute[]>([]);
+  const [customStartLocation, setCustomStartLocation] = useState<Coordinates | null>(null);
   
   const [isLoading, setIsLoading] = useState({
     generating: false,
@@ -35,7 +36,6 @@ const RoamFreeClientPage = () => {
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  // Authentication Check
   useEffect(() => {
     const token = localStorage.getItem('mockAuthToken');
     if (!token) {
@@ -46,7 +46,6 @@ const RoamFreeClientPage = () => {
     setIsLoading(prev => ({ ...prev, authCheck: false }));
   }, [router]);
 
-  // Load wishlist from localStorage
   useEffect(() => {
     if (isAuthenticated) {
       const storedWishlist = localStorage.getItem('roamfreeWishlist');
@@ -55,15 +54,14 @@ const RoamFreeClientPage = () => {
           setWishlist(JSON.parse(storedWishlist));
         } catch (error) {
           console.error("Failed to parse wishlist from localStorage", error);
-          localStorage.removeItem('roamfreeWishlist'); // Clear corrupted data
+          localStorage.removeItem('roamfreeWishlist');
         }
       }
     }
   }, [isAuthenticated]);
 
-  // Save wishlist to localStorage
   useEffect(() => {
-    if (isAuthenticated && wishlist.length >= 0) { // Ensure wishlist is initialized before saving
+    if (isAuthenticated && wishlist.length >= 0) {
       localStorage.setItem('roamfreeWishlist', JSON.stringify(wishlist));
     }
   }, [wishlist, isAuthenticated]);
@@ -74,19 +72,21 @@ const RoamFreeClientPage = () => {
       toast({
         variant: "destructive",
         title: "Geolocation Error",
-        description: geoError.message || "Could not fetch your location.",
+        description: geoError.message || "Could not fetch your location. You can set a starting point manually on the map.",
       });
     }
   }, [geoError, toast]);
 
   const handleGenerateRoute = useCallback(async (data: RouteGeneratorFormData) => {
-    if (!userLocation) {
+    const locationForGeneration = customStartLocation || userLocation;
+
+    if (!locationForGeneration) {
       toast({
         variant: "destructive",
         title: "Location Needed",
-        description: "Your current location is required to generate a route. Please enable location services.",
+        description: "Your current location is unavailable and no custom start point is set. Please enable location services or click on the map to set a starting point.",
       });
-      getCurrentPosition(); // Attempt to get position again
+      if (!userLocation) getCurrentPosition(); // Attempt to get position again if it's the one missing
       return;
     }
 
@@ -96,7 +96,6 @@ const RoamFreeClientPage = () => {
     setRouteAdjustment(null);
     setActiveTab("generate");
 
-    // Convert radius from km to meters and timeLimit from hours to minutes
     const radiusInMeters = data.radius * 1000;
     const timeLimitInMinutes = data.timeLimit * 60;
 
@@ -105,8 +104,8 @@ const RoamFreeClientPage = () => {
       radius: radiusInMeters,
       timeLimit: timeLimitInMinutes,
       currentLocation: {
-        latitude: userLocation.lat,
-        longitude: userLocation.lng,
+        latitude: locationForGeneration.lat,
+        longitude: locationForGeneration.lng,
       },
     };
 
@@ -142,14 +141,15 @@ const RoamFreeClientPage = () => {
     setIsLoading(prev => ({ ...prev, summarizing: false }));
     setActiveTab("details");
 
-  }, [userLocation, toast, getCurrentPosition]);
+  }, [userLocation, customStartLocation, toast, getCurrentPosition]);
 
   const handleAdjustRoute = useCallback(async (data: RouteAdjusterFormData) => {
-    if (!generatedRoute || !userLocation) {
+    const locationForAdjustment = customStartLocation || userLocation;
+    if (!generatedRoute || !locationForAdjustment) {
       toast({
         variant: "destructive",
         title: "Cannot Adjust Route",
-        description: "A route must be generated first, and your location is required.",
+        description: "A route must be generated first, and a starting location (current or custom) is required.",
       });
       return;
     }
@@ -174,7 +174,7 @@ const RoamFreeClientPage = () => {
       setActiveTab("adjust");
     }
     setIsLoading(prev => ({ ...prev, adjusting: false }));
-  }, [generatedRoute, userLocation, toast]);
+  }, [generatedRoute, userLocation, customStartLocation, toast]);
 
   const handleLogout = () => {
     localStorage.removeItem('mockAuthToken');
@@ -183,6 +183,7 @@ const RoamFreeClientPage = () => {
     setRouteSummary(null);
     setRouteAdjustment(null);
     setWishlist([]);
+    setCustomStartLocation(null);
     setActiveTab("generate");
     toast({title: "Logged Out", description: "You have been successfully logged out."})
     router.push('/login');
@@ -201,7 +202,6 @@ const RoamFreeClientPage = () => {
   const handleRemoveFromWishlist = (routeId: string) => {
     setWishlist(prev => prev.filter(r => r.id !== routeId));
     toast({ title: "Removed from Wishlist" });
-    // If the removed route was the currently viewed generatedRoute, clear it
     if (generatedRoute && generatedRoute.id === routeId) {
         setGeneratedRoute(null);
         setRouteSummary(null);
@@ -211,12 +211,16 @@ const RoamFreeClientPage = () => {
 
   const handleSelectWishlistItem = (route: SavedRoute) => {
     setGeneratedRoute(route); 
-    // Attempt to find or create a summary for the wishlisted item
-    // For now, a simple placeholder summary or re-use existing if available logic
     setRouteSummary({ summary: `Showing details for wishlisted route: ${route.routeDescription.substring(0,100)}...` });
-    setRouteAdjustment(null); // Clear any previous adjustments
+    setRouteAdjustment(null);
+    setCustomStartLocation(null); // Clear custom start when loading a wishlist item
     setActiveTab("details");
   };
+
+  const handleMapClick = useCallback((coords: Coordinates) => {
+    setCustomStartLocation(coords);
+    toast({ title: "Custom Start Location Set", description: "Route generation will use this point." });
+  }, [toast]);
 
   if (isLoading.authCheck || isAuthenticated === null) {
      return (
@@ -228,8 +232,6 @@ const RoamFreeClientPage = () => {
   }
 
   if (!isAuthenticated) {
-    // This case should ideally be handled by the redirect in useEffect,
-    // but as a fallback or if routing is slow:
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -238,7 +240,9 @@ const RoamFreeClientPage = () => {
     );
   }
   
-  if (geoLoading && !userLocation) {
+  // GeoLoading check is now more nuanced; if custom location can be used, we don't strictly need geo.
+  // However, initial geo fetch is still good for user convenience.
+  if (geoLoading && !userLocation && !customStartLocation) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -267,6 +271,9 @@ const RoamFreeClientPage = () => {
           onAddToWishlist={handleAddToWishlist}
           onRemoveFromWishlist={handleRemoveFromWishlist}
           onSelectWishlistItem={handleSelectWishlistItem}
+          customStartLocation={customStartLocation}
+          setCustomStartLocation={setCustomStartLocation}
+          isGeolocating={geoLoading}
         />
       </div>
       <main className="flex-1 h-full p-4">
@@ -274,7 +281,10 @@ const RoamFreeClientPage = () => {
           apiKey={mapsApiKey}
           userLocation={userLocation}
           routeLocations={generatedRoute?.locations || null}
-          defaultCenter={userLocation || { lat: 40.7128, lng: -74.0060 }} 
+          defaultCenter={customStartLocation || userLocation || { lat: 40.7128, lng: -74.0060 }} 
+          defaultZoom={12}
+          onMapClick={handleMapClick}
+          customStartMarker={customStartLocation}
         />
       </main>
     </div>

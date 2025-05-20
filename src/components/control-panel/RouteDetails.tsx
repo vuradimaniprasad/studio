@@ -14,11 +14,12 @@ import MapDisplay from '@/components/map/MapDisplay';
 interface RouteDetailsProps {
   routeData: GeneratedRouteData | null;
   summaryData: RouteSummaryData | null;
-  userLocation: Coordinates | null; // Added userLocation
-  mapsApiKey: string | undefined;   // Added mapsApiKey
+  userLocation: Coordinates | null;
+  mapsApiKey: string | undefined;
   onAddToWishlist: (route: GeneratedRouteData) => void;
   onRemoveFromWishlist: (routeId: string) => void;
   wishlist: SavedRoute[];
+  customStartLocation: Coordinates | null; // Added for consistency if needed in future mini-map
 }
 
 const formatTime = (minutes: number): string => {
@@ -33,11 +34,12 @@ const formatTime = (minutes: number): string => {
 const RouteDetails: FC<RouteDetailsProps> = ({
   routeData,
   summaryData,
-  userLocation, // Destructure userLocation
-  mapsApiKey,   // Destructure mapsApiKey
+  userLocation,
+  mapsApiKey,
   onAddToWishlist,
   onRemoveFromWishlist,
   wishlist,
+  customStartLocation, // Destructure though not directly used in mini-map logic yet
 }) => {
   if (!routeData && !summaryData) {
     return (
@@ -53,12 +55,16 @@ const RouteDetails: FC<RouteDetailsProps> = ({
   const hasRouteLocations = routeData?.locations && routeData.locations.length > 0;
   const isInWishlist = routeData ? wishlist.some(item => item.id === routeData.id) : false;
 
+  // For the mini-map in details, prioritize the first point of the *generated route* as the center.
+  // If there's a customStartLocation that was used for generation, that info is implicit in routeData.locations[0]
+  // if the route was generated from it. Otherwise, use userLocation or a fallback.
   const mapDefaultCenter = hasRouteLocations && routeData?.locations[0]
     ? { lat: routeData.locations[0].latitude, lng: routeData.locations[0].longitude }
-    : userLocation || undefined;
+    : customStartLocation || userLocation || undefined;
+
 
   return (
-    <ScrollArea className="h-[calc(100vh-200px)] pr-2"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-200px)] pr-2">
       <div className="space-y-4">
         {routeData && (
           <div className="flex justify-end mb-2 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2 -mx-1 px-1 rounded">
@@ -83,10 +89,12 @@ const RouteDetails: FC<RouteDetailsProps> = ({
               <div className="h-[250px] w-full rounded-md overflow-hidden border border-border">
                 <MapDisplay
                   apiKey={mapsApiKey}
-                  userLocation={userLocation} // Pass userLocation to this mini-map too
+                  userLocation={userLocation} 
                   routeLocations={routeData.locations}
                   defaultCenter={mapDefaultCenter}
                   defaultZoom={13} 
+                  // No onMapClick for the details mini-map
+                  customStartMarker={customStartLocation} // Show custom start if it was active for this route
                 />
               </div>
             </CardContent>
