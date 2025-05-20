@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -7,10 +8,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import RouteGenerator, { type RouteGeneratorFormData } from './RouteGenerator';
 import RouteDetails from './RouteDetails';
 import RouteAdjuster, { type RouteAdjusterFormData } from './RouteAdjuster';
-import type { GeneratedRouteData, RouteSummaryData, RouteAdjustmentData } from '@/types';
+import type { GeneratedRouteData, RouteSummaryData, RouteAdjustmentData, Coordinates } from '@/types';
 import { SlidersHorizontal, ListOrdered, Shuffle, Route } from 'lucide-react';
 
 interface ControlPanelProps {
+  activeTab: string;
+  setActiveTab: (value: string) => void;
   onGenerateRoute: (data: RouteGeneratorFormData) => void;
   onAdjustRoute: (data: RouteAdjusterFormData) => void;
   generatedRoute: GeneratedRouteData | null;
@@ -22,9 +25,13 @@ interface ControlPanelProps {
     adjusting: boolean;
   };
   currentRouteDescription?: string | null;
+  userLocation: Coordinates | null;
+  mapsApiKey: string | undefined;
 }
 
 const ControlPanel: FC<ControlPanelProps> = ({
+  activeTab,
+  setActiveTab,
   onGenerateRoute,
   onAdjustRoute,
   generatedRoute,
@@ -32,6 +39,8 @@ const ControlPanel: FC<ControlPanelProps> = ({
   routeAdjustment,
   isLoading,
   currentRouteDescription,
+  userLocation,
+  mapsApiKey,
 }) => {
   return (
     <Card className="h-full flex flex-col shadow-xl border-r-0 rounded-r-none">
@@ -43,7 +52,7 @@ const ControlPanel: FC<ControlPanelProps> = ({
         <CardDescription>Plan and manage your explorations.</CardDescription>
       </CardHeader>
       <CardContent className="p-0 flex-grow overflow-hidden">
-        <Tabs defaultValue="generate" className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
             <TabsTrigger value="generate" className="py-3 text-sm">
               <SlidersHorizontal size={16} className="mr-2" /> Generate
@@ -61,7 +70,12 @@ const ControlPanel: FC<ControlPanelProps> = ({
               <RouteGenerator onSubmit={onGenerateRoute} isLoading={isLoading.generating || isLoading.summarizing} />
             </TabsContent>
             <TabsContent value="details">
-              <RouteDetails routeData={generatedRoute} summaryData={routeSummary} />
+              <RouteDetails
+                routeData={generatedRoute}
+                summaryData={routeSummary}
+                userLocation={userLocation}
+                mapsApiKey={mapsApiKey}
+              />
             </TabsContent>
             <TabsContent value="adjust">
               <RouteAdjuster

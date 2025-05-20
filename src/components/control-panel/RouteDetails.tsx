@@ -1,16 +1,20 @@
+
 "use client";
 
 import type { FC } from 'react';
-import type { GeneratedRouteData, RouteSummaryData, RouteLocation } from '@/types';
+import type { GeneratedRouteData, RouteSummaryData, RouteLocation, Coordinates } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ListChecks, Clock, Milestone, Info, MapPin } from 'lucide-react';
+import { ListChecks, Clock, Info, MapPin, Map as MapIcon } from 'lucide-react';
+import MapDisplay from '@/components/map/MapDisplay';
 
 interface RouteDetailsProps {
   routeData: GeneratedRouteData | null;
   summaryData: RouteSummaryData | null;
+  userLocation: Coordinates | null;
+  mapsApiKey: string | undefined;
 }
 
 const formatTime = (minutes: number): string => {
@@ -22,7 +26,7 @@ const formatTime = (minutes: number): string => {
   return result.trim() || 'N/A';
 };
 
-const RouteDetails: FC<RouteDetailsProps> = ({ routeData, summaryData }) => {
+const RouteDetails: FC<RouteDetailsProps> = ({ routeData, summaryData, userLocation, mapsApiKey }) => {
   if (!routeData && !summaryData) {
     return (
       <Card className="shadow-lg">
@@ -34,9 +38,34 @@ const RouteDetails: FC<RouteDetailsProps> = ({ routeData, summaryData }) => {
     );
   }
 
+  const hasRouteLocations = routeData?.locations && routeData.locations.length > 0;
+
   return (
     <ScrollArea className="h-[calc(100vh-200px)] pr-2"> {/* Adjust height as needed */}
       <div className="space-y-4">
+        {hasRouteLocations && mapsApiKey && (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><MapIcon size={20} />Route Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px] w-full rounded-md overflow-hidden border border-border">
+                <MapDisplay
+                  apiKey={mapsApiKey}
+                  userLocation={userLocation}
+                  routeLocations={routeData!.locations}
+                  defaultCenter={
+                    routeData!.locations[0]
+                      ? { lat: routeData!.locations[0].latitude, lng: routeData!.locations[0].longitude }
+                      : userLocation || undefined 
+                  }
+                  defaultZoom={13} 
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {summaryData && (
           <Card className="shadow-lg">
             <CardHeader>

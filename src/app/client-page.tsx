@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -24,6 +25,8 @@ const RoamFreeClientPage = () => {
     summarizing: false,
     adjusting: false,
   });
+
+  const [activeTab, setActiveTab] = useState<string>("generate");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -52,6 +55,7 @@ const RoamFreeClientPage = () => {
     setGeneratedRoute(null);
     setRouteSummary(null);
     setRouteAdjustment(null);
+    setActiveTab("generate"); // Stay on generate or switch back if user navigated away
 
     const routeInput = {
       prompt: `${data.prompt} User is interested in: ${data.preferences.join(', ')}.`,
@@ -78,8 +82,8 @@ const RoamFreeClientPage = () => {
     // Now summarize the route
     const summaryInput = {
       routeDescription: routeResult.routeDescription,
-      estimatedTime: `${routeResult.totalEstimatedTime} minutes`, // Assuming distance is not directly available from generateRoute
-      estimatedDistance: "Distance not calculated by AI", // Placeholder
+      estimatedTime: `${routeResult.totalEstimatedTime} minutes`, 
+      estimatedDistance: "Distance not calculated by AI", 
       attractionPreferences: data.preferences.join(', '),
     };
     const summaryResult = await summarizeGeneratedRoute(summaryInput);
@@ -90,6 +94,7 @@ const RoamFreeClientPage = () => {
       setRouteSummary(summaryResult);
     }
     setIsLoading(prev => ({ ...prev, summarizing: false }));
+    setActiveTab("details"); // Switch to details tab after generation and summary
 
   }, [userLocation, toast, getCurrentPosition]);
 
@@ -110,7 +115,7 @@ const RoamFreeClientPage = () => {
       currentRoute: generatedRoute.routeDescription,
       trafficConditions: data.trafficConditions,
       timeConstraints: data.timeConstraints,
-      radius: (generatedRoute.locations && generatedRoute.locations.length > 0) ? 5000 : 2000, // Example radius, could be from original form
+      radius: (generatedRoute.locations && generatedRoute.locations.length > 0) ? 5000 : 2000, 
     };
 
     const adjustmentResult = await adjustExplorationRoute(adjustmentInput);
@@ -120,6 +125,7 @@ const RoamFreeClientPage = () => {
     } else {
       setRouteAdjustment(adjustmentResult);
       toast({ title: "Route Adjustments Suggested", description: "Check out the alternative plans." });
+      setActiveTab("adjust"); // Optionally switch to adjust tab or stay
     }
     setIsLoading(prev => ({ ...prev, adjusting: false }));
   }, [generatedRoute, userLocation, toast]);
@@ -137,6 +143,8 @@ const RoamFreeClientPage = () => {
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <div className="w-full md:w-[400px] lg:w-[450px] flex-shrink-0 h-full border-r border-border shadow-lg">
         <ControlPanel
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onGenerateRoute={handleGenerateRoute}
           onAdjustRoute={handleAdjustRoute}
           generatedRoute={generatedRoute}
@@ -144,6 +152,8 @@ const RoamFreeClientPage = () => {
           routeAdjustment={routeAdjustment}
           isLoading={isLoading}
           currentRouteDescription={generatedRoute?.routeDescription}
+          userLocation={userLocation}
+          mapsApiKey={mapsApiKey}
         />
       </div>
       <main className="flex-1 h-full p-4">
@@ -151,7 +161,7 @@ const RoamFreeClientPage = () => {
           apiKey={mapsApiKey}
           userLocation={userLocation}
           routeLocations={generatedRoute?.locations || null}
-          defaultCenter={userLocation || { lat: 40.7128, lng: -74.0060 }} // Default to NYC if no user loc
+          defaultCenter={userLocation || { lat: 40.7128, lng: -74.0060 }} 
         />
       </main>
     </div>
