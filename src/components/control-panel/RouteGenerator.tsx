@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from "@/components/ui/slider";
+// import { Slider } from "@/components/ui/slider"; // Slider is no longer used
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { attractionPreferencesOptions, type AttractionPreference } from '@/types';
@@ -77,23 +77,15 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
             <FormItem>
               <FormLabel className="flex items-center gap-2"><MapPin size={16}/>Exploration Radius (kilometers)</FormLabel>
               <FormControl>
-                <div>
-                  <Slider
-                    min={0.5}
-                    max={10}
-                    step={0.1}
-                    defaultValue={[field.value]}
-                    onValueChange={(value) => field.onChange(value[0])}
-                    className="my-4"
-                  />
+                <div className="flex items-center gap-2">
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                    onChange={e => field.onChange(e.target.valueAsNumber)} 
                     step="0.1"
-                    className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="w-32 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
-                  <span className="text-sm text-muted-foreground ml-2">{field.value} km</span>
+                  <span className="text-sm text-muted-foreground">km</span>
                 </div>
               </FormControl>
               <FormMessage />
@@ -108,23 +100,15 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
             <FormItem>
               <FormLabel className="flex items-center gap-2"><Clock size={16}/>Available Time (hours)</FormLabel>
               <FormControl>
-                 <div>
-                  <Slider
-                    min={0.5}
-                    max={6}
-                    step={0.25} // 15 minute increments
-                    defaultValue={[field.value]}
-                    onValueChange={(value) => field.onChange(value[0])}
-                    className="my-4"
-                  />
+                 <div className="flex items-center gap-2">
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                    onChange={e => field.onChange(e.target.valueAsNumber)}
                     step="0.25"
-                    className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" 
+                    className="w-32 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" 
                   />
-                  <span className="text-sm text-muted-foreground ml-2">{field.value} hours</span>
+                  <span className="text-sm text-muted-foreground">hours</span>
                  </div>
               </FormControl>
               <FormMessage />
@@ -194,3 +178,4 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
 };
 
 export default RouteGenerator;
+
