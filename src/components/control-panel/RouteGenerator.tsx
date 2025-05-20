@@ -76,7 +76,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
             <FormItem>
               <FormLabel className="flex items-center gap-2"><MapPin size={16}/>Exploration Radius (meters)</FormLabel>
               <FormControl>
-                <>
+                <div>
                   <Slider
                     min={500}
                     max={10000}
@@ -87,7 +87,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
                   />
                   <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"/>
                   <span className="text-sm text-muted-foreground ml-2">{field.value} meters</span>
-                </>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -101,7 +101,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
             <FormItem>
               <FormLabel className="flex items-center gap-2"><Clock size={16}/>Available Time (minutes)</FormLabel>
               <FormControl>
-                 <>
+                 <div>
                   <Slider
                     min={30}
                     max={360}
@@ -112,7 +112,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
                   />
                   <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                   <span className="text-sm text-muted-foreground ml-2">{field.value} minutes</span>
-                 </>
+                 </div>
               </FormControl>
               <FormMessage />
             </FormItem>
