@@ -96,10 +96,14 @@ const RoamFreeClientPage = () => {
     setRouteAdjustment(null);
     setActiveTab("generate");
 
+    // Convert radius from km to meters and timeLimit from hours to minutes
+    const radiusInMeters = data.radius * 1000;
+    const timeLimitInMinutes = data.timeLimit * 60;
+
     const routeInput = {
       prompt: `${data.prompt} User is interested in: ${data.preferences.join(', ')}.`,
-      radius: data.radius,
-      timeLimit: data.timeLimit,
+      radius: radiusInMeters,
+      timeLimit: timeLimitInMinutes,
       currentLocation: {
         latitude: userLocation.lat,
         longitude: userLocation.lng,

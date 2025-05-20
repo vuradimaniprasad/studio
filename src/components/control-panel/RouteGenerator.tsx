@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FC } from 'react';
@@ -16,8 +17,8 @@ import { Wand2, MapPin, Clock, Search } from 'lucide-react';
 
 const routeGeneratorSchema = z.object({
   prompt: z.string().min(10, { message: "Please describe your ideal exploration in at least 10 characters." }),
-  radius: z.number().min(500, { message: "Radius must be at least 500 meters." }).max(10000, { message: "Radius cannot exceed 10000 meters." }),
-  timeLimit: z.number().min(30, { message: "Time limit must be at least 30 minutes." }).max(360, { message: "Time limit cannot exceed 360 minutes." }),
+  radius: z.number().min(0.5, { message: "Radius must be at least 0.5 km." }).max(10, { message: "Radius cannot exceed 10 km." }),
+  timeLimit: z.number().min(0.5, { message: "Time limit must be at least 0.5 hours." }).max(6, { message: "Time limit cannot exceed 6 hours." }),
   preferences: z.array(z.string()).refine(value => value.some(item => item), {
     message: "You have to select at least one preference.",
   }),
@@ -35,8 +36,8 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
     resolver: zodResolver(routeGeneratorSchema),
     defaultValues: {
       prompt: "",
-      radius: 2000, // Default 2km
-      timeLimit: 120, // Default 2 hours
+      radius: 2, // Default 2 km
+      timeLimit: 2, // Default 2 hours
       preferences: [],
     },
   });
@@ -74,19 +75,25 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
           name="radius"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2"><MapPin size={16}/>Exploration Radius (meters)</FormLabel>
+              <FormLabel className="flex items-center gap-2"><MapPin size={16}/>Exploration Radius (kilometers)</FormLabel>
               <FormControl>
                 <div>
                   <Slider
-                    min={500}
-                    max={10000}
-                    step={100}
+                    min={0.5}
+                    max={10}
+                    step={0.1}
                     defaultValue={[field.value]}
                     onValueChange={(value) => field.onChange(value[0])}
                     className="my-4"
                   />
-                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"/>
-                  <span className="text-sm text-muted-foreground ml-2">{field.value} meters</span>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                    step="0.1"
+                    className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="text-sm text-muted-foreground ml-2">{field.value} km</span>
                 </div>
               </FormControl>
               <FormMessage />
@@ -99,19 +106,25 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
           name="timeLimit"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2"><Clock size={16}/>Available Time (minutes)</FormLabel>
+              <FormLabel className="flex items-center gap-2"><Clock size={16}/>Available Time (hours)</FormLabel>
               <FormControl>
                  <div>
                   <Slider
-                    min={30}
-                    max={360}
-                    step={15}
+                    min={0.5}
+                    max={6}
+                    step={0.25} // 15 minute increments
                     defaultValue={[field.value]}
                     onValueChange={(value) => field.onChange(value[0])}
                     className="my-4"
                   />
-                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
-                  <span className="text-sm text-muted-foreground ml-2">{field.value} minutes</span>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                    step="0.25"
+                    className="mt-1 appearance-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" 
+                  />
+                  <span className="text-sm text-muted-foreground ml-2">{field.value} hours</span>
                  </div>
               </FormControl>
               <FormMessage />
