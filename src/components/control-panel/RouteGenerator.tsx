@@ -19,9 +19,7 @@ const routeGeneratorSchema = z.object({
   prompt: z.string().min(10, { message: "Please describe your ideal exploration in at least 10 characters." }),
   radius: z.number().min(0.5, { message: "Radius must be at least 0.5 km." }).max(10, { message: "Radius cannot exceed 10 km." }),
   timeLimit: z.number().min(0.5, { message: "Time limit must be at least 0.5 hours." }).max(6, { message: "Time limit cannot exceed 6 hours." }),
-  preferences: z.array(z.string()).refine(value => value.some(item => item), {
-    message: "You have to select at least one preference.",
-  }),
+  preferences: z.array(z.string()).default([]), // Made preferences optional, defaulting to an empty array
 });
 
 export type RouteGeneratorFormData = z.infer<typeof routeGeneratorSchema>;
@@ -122,9 +120,9 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
           render={() => (
             <FormItem>
               <div className="mb-4">
-                <FormLabel className="text-base">Attraction Preferences</FormLabel>
+                <FormLabel className="text-base">Attraction Preferences (Optional)</FormLabel>
                 <FormDescription>
-                  Select the types of attractions you're interested in.
+                  Select any types of attractions you're interested in.
                 </FormDescription>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -162,7 +160,7 @@ const RouteGenerator: FC<RouteGeneratorProps> = ({ onSubmit, isLoading }) => {
                 />
               ))}
               </div>
-              <FormMessage />
+              <FormMessage /> {/* This will no longer show the "at least one" error */}
             </FormItem>
           )}
         />
